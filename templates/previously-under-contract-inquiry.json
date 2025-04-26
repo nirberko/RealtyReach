@@ -2,5 +2,6 @@
   "name": "Previously Under Contract Inquiry",
   "description": "Template for inquiring about a property that was previously under contract",
   "author": "RealtyReach",
+  "category": "Property Inquiry",
   "content": "Dear {{agent_name}},\n\nI recently came across your listing for {{property_address}} and I'm very interested in learning more about this property.\n\nCould you please provide additional information about its current condition, including any recent renovations or issues I should be aware of? I noticed that it was previously under contract but has returned to the market, I'm curious about why the previous contract fell through - were there any inspection concerns or other factors?\n\nAlso, I would appreciate if you could share more pictures of both the interior and exterior of the home.\n\nThank you for your assistance. I look forward to your response.\n\nBest regards,\n{{your_name}}\n{{your_phone}}\n{{your_email}}"
 } 
