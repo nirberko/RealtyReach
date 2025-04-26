@@ -31,6 +31,7 @@ const DEFAULT_TEMPLATE_FILE = 'default-standard-inquiry.json';
 const fullNameInput = document.getElementById('fullName');
 const phoneNumberInput = document.getElementById('phoneNumber');
 const emailInput = document.getElementById('email');
+const emailClientSelect = document.getElementById('emailClient');
 const templateListContainer = document.getElementById('templateList');
 const saveButton = document.getElementById('saveButton');
 const resetButton = document.getElementById('resetButton');
@@ -211,12 +212,14 @@ function loadSettings() {
     fullName: '',
     phoneNumber: '',
     email: '',
+    emailClient: 'native', // Default to native email app
     templates: defaultTemplate ? [defaultTemplate] : [FALLBACK_TEMPLATE]
   }, (items) => {
     // Update input fields with saved values
     fullNameInput.value = items.fullName;
     phoneNumberInput.value = items.phoneNumber;
     emailInput.value = items.email;
+    emailClientSelect.value = items.emailClient;
     
     // Load templates
     templates = items.templates;
@@ -239,12 +242,14 @@ function saveSettings() {
   const fullName = fullNameInput.value.trim();
   const phoneNumber = phoneNumberInput.value.trim();
   const email = emailInput.value.trim();
+  const emailClient = emailClientSelect.value;
   
   // Save to Chrome storage
   chrome.storage.sync.set({
     fullName,
     phoneNumber,
     email,
+    emailClient,
     templates
   }, () => {
     // Show success message

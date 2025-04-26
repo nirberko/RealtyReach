@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize UI elements
   let propertyAddressElement, agentNameElement, agentEmailElement, 
       emailTemplateElement, templateSelectElement, copyButton,
-      sendButton, statusElement, settingsButton;
+      sendButton, statusElement, settingsButton, emailClientIndicator;
   
   try {
     propertyAddressElement = document.getElementById('property-address');
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('send-button');
     statusElement = document.getElementById('status');
     settingsButton = document.getElementById('settings-button');
+    emailClientIndicator = document.getElementById('email-client-indicator');
   } catch (error) {
     console.error('Error initializing UI elements:', error);
     // We'll continue and let individual functions handle missing elements
@@ -63,8 +64,17 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.sync.get({
         fullName: '',
         phoneNumber: '',
-        email: ''
+        email: '',
+        emailClient: 'native' // Add default email client preference
       }, (userSettings) => {
+        // Update email client indicator
+        if (emailClientIndicator) {
+          const clientText = userSettings.emailClient === 'gmail' ? 
+            'Using Gmail for sending' : 
+            'Using native email app for sending';
+          emailClientIndicator.textContent = clientText;
+        }
+        
         if (!userSettings.fullName || !userSettings.phoneNumber || !userSettings.email) {
           // Create settings alert container if it doesn't exist
           let alertContainer = document.getElementById('settings-alert');
@@ -198,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Send email (opens default mail client)
+  // Send email (opens default mail client or Gmail based on user preference)
   if (sendButton && agentEmailElement && propertyAddressElement && emailTemplateElement) {
     sendButton.addEventListener('click', () => {
       try {
@@ -208,9 +218,26 @@ document.addEventListener('DOMContentLoaded', () => {
           const subject = `Inquiry about property at ${propertyAddressElement.textContent}`;
           const body = encodeURIComponent(emailTemplateElement.value);
           
-          // Open default email client
-          window.open(`mailto:${agentEmail}?subject=${encodeURIComponent(subject)}&body=${body}`);
-          safeShowStatus('Opening email client...', 'success');
+          // Get user's preferred email client
+          chrome.storage.sync.get({
+            emailClient: 'native' // Default to native email app if not set
+          }, (settings) => {
+            try {
+              if (settings.emailClient === 'gmail') {
+                // Open Gmail compose window
+                const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${agentEmail}&su=${encodeURIComponent(subject)}&body=${body}`;
+                window.open(gmailUrl);
+                safeShowStatus('Opening Gmail...', 'success');
+              } else {
+                // Open default email client (native app)
+                window.open(`mailto:${agentEmail}?subject=${encodeURIComponent(subject)}&body=${body}`);
+                safeShowStatus('Opening email client...', 'success');
+              }
+            } catch (error) {
+              console.error('Error opening email client:', error);
+              safeShowStatus('Error opening email client. Please try again.', 'error');
+            }
+          });
         } else {
           safeShowStatus('Agent email not detected. Unable to send email.', 'error');
         }
