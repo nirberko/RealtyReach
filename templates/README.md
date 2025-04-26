@@ -33,14 +33,6 @@ To contribute a template to the marketplace:
 }
 ```
 
-For the default template, you can include an additional field:
-
-```json
-{
-  "isDefault": true
-}
-```
-
 ### Available Variables
 
 The following variables can be used in your templates:
