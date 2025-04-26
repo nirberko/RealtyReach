@@ -47,6 +47,96 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep the message channel open for asynchronous response
 });
 
+// Check if the current property has been contacted before
+function checkContactedProperty() {
+  try {
+    const propertyInfo = getPropertyInfo();
+    
+    if (!propertyInfo || !propertyInfo.propertyAddress) {
+      console.log('No property info available to check');
+      return;
+    }
+    
+    // Create a unique identifier for the property
+    const propertyId = propertyInfo.propertyAddress.trim().toLowerCase();
+    
+    // Load contacted properties from storage
+    chrome.storage.local.get({ contactedProperties: {} }, (result) => {
+      const contactedProperties = result.contactedProperties || {};
+      
+      // Check if this property is in the list
+      if (contactedProperties[propertyId]) {
+        console.log('Property was previously contacted:', propertyInfo.propertyAddress);
+        
+        // Get the contact info
+        const contactInfo = contactedProperties[propertyId];
+        const contactDate = new Date(contactInfo.lastContacted);
+        const formattedDate = contactDate.toLocaleDateString();
+        const contactType = contactInfo.contactType === 'sent' ? 'sent' : 'prepared';
+        const timesContacted = contactInfo.timesContacted || 1;
+        
+        // Show a persistent banner
+        showContactedBanner(contactType, formattedDate, timesContacted);
+      }
+    });
+  } catch (error) {
+    console.error('Error checking if property was contacted:', error);
+  }
+}
+
+// Show a persistent banner for previously contacted properties
+function showContactedBanner(contactType, date, times) {
+  // Remove any existing banner first
+  const existingBanner = document.getElementById('realty-reach-contacted-banner');
+  if (existingBanner) {
+    existingBanner.remove();
+  }
+  
+  // Create the banner element
+  const banner = document.createElement('div');
+  banner.id = 'realty-reach-contacted-banner';
+  banner.style.position = 'fixed';
+  banner.style.top = '0';
+  banner.style.left = '0';
+  banner.style.right = '0';
+  banner.style.backgroundColor = '#006AFF';
+  banner.style.color = 'white';
+  banner.style.padding = '10px 20px';
+  banner.style.zIndex = '10000000';
+  banner.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  banner.style.display = 'flex';
+  banner.style.justifyContent = 'space-between';
+  banner.style.alignItems = 'center';
+  banner.style.fontFamily = 'Arial, sans-serif';
+  
+  // Create the message text
+  const messageText = document.createElement('div');
+  messageText.innerHTML = `
+    <strong>✓ RealtyReach:</strong> You have already ${contactType} an email for this property on ${date}
+    ${times > 1 ? `<span>(contacted ${times} times)</span>` : ''}
+  `;
+  
+  // Create close button
+  const closeButton = document.createElement('button');
+  closeButton.textContent = '✕';
+  closeButton.style.background = 'none';
+  closeButton.style.border = 'none';
+  closeButton.style.color = 'white';
+  closeButton.style.fontSize = '16px';
+  closeButton.style.cursor = 'pointer';
+  closeButton.style.padding = '0 5px';
+  closeButton.addEventListener('click', () => {
+    banner.remove();
+  });
+  
+  // Add elements to the banner
+  banner.appendChild(messageText);
+  banner.appendChild(closeButton);
+  
+  // Add banner to the page
+  document.body.appendChild(banner);
+}
+
 // We could add a small UI indicator when the extension is active on a supported site
 function addExtensionIndicator() {
   const indicator = document.createElement('div');
@@ -89,6 +179,10 @@ window.addEventListener('load', () => {
   if (initializeSiteHandler()) {
     // Only add the indicator if we detect we're on a supported property page
     if (currentSiteHandler.getPropertyAddress()) {
+      // Check if property was previously contacted
+      checkContactedProperty();
+      
+      // Add the extension indicator
       addExtensionIndicator();
     }
   }

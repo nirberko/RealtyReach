@@ -1,24 +1,9 @@
-// Default fallback template (used only if file loading fails)
+// Default fallback template (used only if file loading fails completely)
 const FALLBACK_TEMPLATE = {
   id: 'default',
   name: 'Standard Inquiry',
   isDefault: true,
-  content: `Dear {{agent_name}},
-
-I am interested in the property at {{property_address}} that I found on Zillow. I would like to schedule a viewing at your earliest convenience.
-
-Could you please provide me with more information about this property, including:
-- Current status (is it still available?)
-- Any recent price changes
-- Details about the neighborhood
-- Potential closing timeline
-
-I'm looking forward to hearing back from you soon.
-
-Thank you,
-{{your_name}}
-{{your_phone}}
-{{your_email}}`
+  content: 'Failed to load default template. Please refresh the page or check your connection.'
 };
 
 // GitHub repository information
@@ -47,7 +32,7 @@ const modalCloseButton = document.getElementById('modalClose');
 const marketplaceTemplatesContainer = document.getElementById('marketplaceTemplates');
 const refreshMarketplaceButton = document.getElementById('refreshMarketplaceButton');
 const templateSearchInput = document.getElementById('templateSearch');
-const marketplaceFilters = document.querySelectorAll('.marketplace-filter');
+const marketplaceFiltersContainer = document.getElementById('marketplaceFilters');
 
 // Preview modal elements
 const previewModal = document.getElementById('previewModal');
@@ -56,6 +41,11 @@ const previewContent = document.getElementById('previewContent');
 const previewClose = document.getElementById('previewClose');
 const previewCloseButton = document.getElementById('previewCloseButton');
 
+// Contact history elements
+const historySearchInput = document.getElementById('historySearch');
+const clearHistoryButton = document.getElementById('clearHistoryButton');
+const contactHistoryContainer = document.getElementById('contactHistoryContainer');
+
 // Templates array
 let templates = [];
 let marketplaceTemplatesData = [];
@@ -63,18 +53,213 @@ let defaultTemplate = null;
 let currentEditingTemplateId = null;
 let currentFilter = 'all';
 let searchQuery = '';
+let contactedProperties = {};
+let historySearchQuery = '';
 
 // Load saved settings when the page loads
 document.addEventListener('DOMContentLoaded', () => {
   loadDefaultTemplate().then(() => {
     loadSettings();
     loadMarketplaceTemplates();
+    loadContactHistory();
   });
   
   // Initialize marketplace search and filters
   setupMarketplaceSearch();
   setupMarketplaceFilters();
+  
+  // Initialize contact history search and clear button
+  setupContactHistoryHandlers();
+  
+  // Set up tabs
+  setupTabs();
 });
+
+// Set up tabs functionality
+function setupTabs() {
+  const tabs = document.querySelectorAll('.tab');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      // Remove active class from all tabs
+      tabs.forEach(t => t.classList.remove('active'));
+      
+      // Hide all tab contents
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked tab
+      tab.classList.add('active');
+      
+      // Show corresponding tab content
+      const tabId = tab.getAttribute('data-tab');
+      document.getElementById(`${tabId}-tab`).classList.add('active');
+    });
+  });
+}
+
+// Set up contact history handlers
+function setupContactHistoryHandlers() {
+  if (historySearchInput) {
+    historySearchInput.addEventListener('input', (e) => {
+      historySearchQuery = e.target.value.toLowerCase();
+      renderContactHistory();
+    });
+  }
+  
+  if (clearHistoryButton) {
+    clearHistoryButton.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear all contact history? This action cannot be undone.')) {
+        chrome.storage.local.set({ contactedProperties: {} }, () => {
+          contactedProperties = {};
+          renderContactHistory();
+          showStatus('Contact history cleared successfully.', 'success');
+        });
+      }
+    });
+  }
+}
+
+// Function to load contact history from chrome storage
+function loadContactHistory() {
+  chrome.storage.local.get({ contactedProperties: {} }, (result) => {
+    contactedProperties = result.contactedProperties || {};
+    renderContactHistory();
+  });
+}
+
+// Function to render contact history table
+function renderContactHistory() {
+  if (!contactHistoryContainer) return;
+  
+  // Clear container
+  contactHistoryContainer.innerHTML = '';
+  
+  // Check if there is any history
+  const propertyIds = Object.keys(contactedProperties);
+  
+  if (propertyIds.length === 0) {
+    contactHistoryContainer.innerHTML = `
+      <div class="history-empty">
+        <p>No contact history available. Start sending emails to property agents to build your history.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Filter properties based on search query
+  const filteredProperties = propertyIds.filter(id => {
+    const property = contactedProperties[id];
+    return property.address.toLowerCase().includes(historySearchQuery) ||
+           property.agent.toLowerCase().includes(historySearchQuery);
+  });
+  
+  if (filteredProperties.length === 0) {
+    contactHistoryContainer.innerHTML = `
+      <div class="history-empty">
+        <p>No properties match your search. Try a different search term.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Create history table
+  const table = document.createElement('table');
+  table.className = 'history-table';
+  
+  // Create table header
+  const thead = document.createElement('thead');
+  thead.innerHTML = `
+    <tr>
+      <th>Property Address</th>
+      <th>Agent</th>
+      <th>Last Contacted</th>
+      <th>Status</th>
+      <th>Times</th>
+      <th>Actions</th>
+    </tr>
+  `;
+  table.appendChild(thead);
+  
+  // Create table body
+  const tbody = document.createElement('tbody');
+  
+  // Sort properties by most recently contacted
+  filteredProperties.sort((a, b) => {
+    const dateA = new Date(contactedProperties[a].lastContacted);
+    const dateB = new Date(contactedProperties[b].lastContacted);
+    return dateB - dateA;
+  });
+  
+  // Add rows for each property
+  filteredProperties.forEach(id => {
+    const property = contactedProperties[id];
+    const row = document.createElement('tr');
+    
+    const contactDate = new Date(property.lastContacted);
+    const formattedDate = contactDate.toLocaleDateString() + ' ' + 
+                          contactDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const contactTypeBadgeClass = property.contactType === 'sent' ? 'contact-type-sent' : 'contact-type-copied';
+    const contactTypeText = property.contactType === 'sent' ? 'Sent' : 'Copied';
+    
+    row.innerHTML = `
+      <td>${property.address}</td>
+      <td>${property.agent}</td>
+      <td>${formattedDate}</td>
+      <td><span class="contact-type-badge ${contactTypeBadgeClass}">${contactTypeText}</span></td>
+      <td>${property.timesContacted}</td>
+      <td>
+        <div class="history-actions">
+          <button class="history-action-button history-view" data-property-id="${id}">Visit</button>
+          <button class="history-action-button history-delete" data-property-id="${id}">Delete</button>
+        </div>
+      </td>
+    `;
+    
+    tbody.appendChild(row);
+  });
+  
+  table.appendChild(tbody);
+  contactHistoryContainer.appendChild(table);
+  
+  // Add event listeners to action buttons
+  const viewButtons = contactHistoryContainer.querySelectorAll('.history-view');
+  viewButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const propertyId = button.getAttribute('data-property-id');
+      const property = contactedProperties[propertyId];
+      if (property && property.url) {
+        // Open the property URL in a new tab
+        chrome.tabs.create({ url: property.url });
+      } else {
+        showStatus('Unable to open property page. URL not available.', 'error');
+      }
+    });
+  });
+  
+  const deleteButtons = contactHistoryContainer.querySelectorAll('.history-delete');
+  deleteButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const propertyId = button.getAttribute('data-property-id');
+      const property = contactedProperties[propertyId];
+      
+      if (confirm(`Are you sure you want to delete "${property.address}" from your contact history?`)) {
+        deletePropertyHistory(propertyId);
+      }
+    });
+  });
+}
+
+// Function to delete a single property from history
+function deletePropertyHistory(propertyId) {
+  delete contactedProperties[propertyId];
+  
+  chrome.storage.local.set({ contactedProperties }, () => {
+    renderContactHistory();
+    showStatus('Property removed from contact history.', 'success');
+  });
+}
 
 // Set up marketplace search
 function setupMarketplaceSearch() {
@@ -86,20 +271,84 @@ function setupMarketplaceSearch() {
 
 // Set up marketplace filters
 function setupMarketplaceFilters() {
-  marketplaceFilters.forEach(filter => {
-    filter.addEventListener('click', () => {
+  // Initial setup for "All Templates" filter
+  const allFilter = marketplaceFiltersContainer.querySelector('[data-filter="all"]');
+  if (allFilter) {
+    allFilter.addEventListener('click', () => {
       // Remove active class from all filters
-      marketplaceFilters.forEach(f => f.classList.remove('active'));
+      const filters = marketplaceFiltersContainer.querySelectorAll('.marketplace-filter');
+      filters.forEach(f => f.classList.remove('active'));
       
       // Add active class to clicked filter
-      filter.classList.add('active');
+      allFilter.classList.add('active');
       
       // Update current filter
-      currentFilter = filter.getAttribute('data-filter');
+      currentFilter = 'all';
       
       // Filter templates
       filterMarketplaceTemplates();
     });
+  }
+
+  // The rest of the filters will be created dynamically when templates are loaded
+}
+
+// Function to create dynamic category filters based on available templates
+function createCategoryFilters() {
+  // Remove existing category filters (except "All Templates" and the refresh button)
+  const existingFilters = marketplaceFiltersContainer.querySelectorAll('.marketplace-filter:not([data-filter="all"])');
+  existingFilters.forEach(filter => filter.remove());
+  
+  // Extract unique categories from marketplace templates
+  const categories = new Set();
+  marketplaceTemplatesData.forEach(template => {
+    // Use the explicit category if available
+    if (template.category) {
+      categories.add(template.category);
+    } 
+    // Use inferred categories as fallback
+    else {
+      // Check for common category terms in filename or description
+      if (template.filename?.includes('first-time') || template.description?.toLowerCase().includes('first-time')) {
+        categories.add('First Time Buyer');
+      }
+      if (template.filename?.includes('investment') || template.description?.toLowerCase().includes('investment')) {
+        categories.add('Investment');
+      }
+      if (template.filename?.includes('luxury') || template.description?.toLowerCase().includes('luxury')) {
+        categories.add('Luxury');
+      }
+    }
+  });
+  
+  // Get the refresh button so we can insert filters before it
+  const refreshButton = document.getElementById('refreshMarketplaceButton');
+  
+  // Create filter button for each unique category
+  categories.forEach(category => {
+    const filterButton = document.createElement('div');
+    filterButton.className = 'marketplace-filter';
+    filterButton.setAttribute('data-filter', category.toLowerCase().replace(/\s+/g, '-'));
+    filterButton.textContent = category;
+    
+    // Add click event listener
+    filterButton.addEventListener('click', () => {
+      // Remove active class from all filters
+      const filters = marketplaceFiltersContainer.querySelectorAll('.marketplace-filter');
+      filters.forEach(f => f.classList.remove('active'));
+      
+      // Add active class to clicked filter
+      filterButton.classList.add('active');
+      
+      // Update current filter
+      currentFilter = filterButton.getAttribute('data-filter');
+      
+      // Filter templates
+      filterMarketplaceTemplates();
+    });
+    
+    // Insert the filter before the refresh button
+    marketplaceFiltersContainer.insertBefore(filterButton, refreshButton);
   });
 }
 
@@ -119,25 +368,32 @@ function filterMarketplaceTemplates() {
       // Apply category filter if not "all"
       let matchesCategory = true;
       if (currentFilter !== 'all') {
-        // Use the category field if available, otherwise fallback to inference
-        const category = template.category?.toLowerCase() || '';
+        // Get the normalized filter name
+        const filterName = currentFilter.replace(/-/g, ' ');
         
-        switch(currentFilter) {
-          case 'first-time':
-            matchesCategory = category === 'first-time buyer' || 
-              (category === '' && (template.filename?.includes('first-time') || 
-                template.description?.toLowerCase().includes('first-time')));
-            break;
-          case 'investment':
-            matchesCategory = category === 'investment' || 
-              (category === '' && (template.filename?.includes('investment') || 
-                template.description?.toLowerCase().includes('investment')));
-            break;
-          case 'luxury':
-            matchesCategory = category === 'luxury' || 
-              (category === '' && (template.filename?.includes('luxury') || 
-                template.description?.toLowerCase().includes('luxury')));
-            break;
+        // Use the category field if available
+        if (template.category) {
+          matchesCategory = template.category.toLowerCase() === filterName;
+        } 
+        // Fallback to inferred categories
+        else {
+          const lowerDesc = template.description?.toLowerCase() || '';
+          const filename = template.filename?.toLowerCase() || '';
+          
+          switch(filterName) {
+            case 'first time buyer':
+              matchesCategory = filename.includes('first-time') || lowerDesc.includes('first time');
+              break;
+            case 'investment':
+              matchesCategory = filename.includes('investment') || lowerDesc.includes('investment');
+              break;
+            case 'luxury':
+              matchesCategory = filename.includes('luxury') || lowerDesc.includes('luxury');
+              break;
+            default:
+              // For any other category, check if category name appears in description or filename
+              matchesCategory = filename.includes(filterName) || lowerDesc.includes(filterName);
+          }
         }
       }
       
@@ -193,15 +449,17 @@ async function loadDefaultTemplate() {
       id: 'default',
       name: templateData.name,
       content: templateData.content,
-      isDefault: true
+      isDefault: true,
+      description: templateData.description,
+      author: templateData.author
     };
     
-    console.log('Default template loaded successfully');
+    console.log('Default template loaded successfully from JSON file');
   } catch (error) {
     console.error('Error loading default template:', error);
     // Use fallback template if loading fails
     defaultTemplate = FALLBACK_TEMPLATE;
-    showStatus('Using built-in default template as fallback.', 'error');
+    showStatus('Error loading default template. Using fallback.', 'error');
   }
 }
 
@@ -213,7 +471,7 @@ function loadSettings() {
     phoneNumber: '',
     email: '',
     emailClient: 'native', // Default to native email app
-    templates: defaultTemplate ? [defaultTemplate] : [FALLBACK_TEMPLATE]
+    templates: []  // Start with empty array instead of a default
   }, (items) => {
     // Update input fields with saved values
     fullNameInput.value = items.fullName;
@@ -221,15 +479,18 @@ function loadSettings() {
     emailInput.value = items.email;
     emailClientSelect.value = items.emailClient;
     
-    // Load templates
-    templates = items.templates;
-    
-    // Make sure we have at least one default template
-    if (templates.length === 0) {
-      templates = [defaultTemplate || FALLBACK_TEMPLATE];
-    } else if (!templates.some(t => t.isDefault)) {
-      // If no default template is set, make the first one default
-      templates[0].isDefault = true;
+    // Load templates - if user has saved templates, use those
+    if (items.templates && items.templates.length > 0) {
+      templates = items.templates;
+      
+      // Make sure we have at least one default template
+      if (!templates.some(t => t.isDefault)) {
+        // If no default template is set, make the first one default
+        templates[0].isDefault = true;
+      }
+    } else {
+      // If user has no templates, use the loaded default from JSON
+      templates = defaultTemplate ? [defaultTemplate] : [FALLBACK_TEMPLATE];
     }
     
     renderTemplateList();
@@ -277,8 +538,15 @@ function openTemplateModal(templateId = null) {
     // Add new template
     currentEditingTemplateId = null;
     modalTitle.textContent = 'Add New Template';
-    // Set default template content based on the loaded default template
-    templateContentInput.value = (defaultTemplate || FALLBACK_TEMPLATE).content;
+    
+    // Set default content based on the loaded default template from JSON
+    if (defaultTemplate && defaultTemplate.content) {
+      templateContentInput.value = defaultTemplate.content;
+    } else {
+      // This should rarely happen as we load the default template first
+      console.warn('Default template not loaded yet, using empty template');
+      templateContentInput.value = '';
+    }
   }
   
   // Show modal
@@ -559,6 +827,9 @@ function loadMarketplaceTemplates() {
       // Store templates data
       marketplaceTemplatesData = marketplaceTemplates;
       
+      // Generate dynamic category filters based on available templates
+      createCategoryFilters();
+      
       // Apply any active filters
       filterMarketplaceTemplates();
       addMarketplaceFooter();
@@ -611,6 +882,17 @@ function renderMarketplaceTemplates(filteredTemplates) {
         categoryText = 'Investment';
       } else if (template.filename?.includes('luxury') || template.description?.toLowerCase().includes('luxury')) {
         categoryText = 'Luxury';
+      } else {
+        // Try to extract a category from filename if not one of the predefined categories
+        const filenameWithoutExt = template.filename?.replace('.json', '') || '';
+        const parts = filenameWithoutExt.split('-');
+        if (parts.length > 1) {
+          // Use capitalized words from filename as category
+          categoryText = parts
+            .slice(0, -1) // Exclude the last part which is usually "template"
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        }
       }
     }
     

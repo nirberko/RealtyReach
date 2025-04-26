@@ -201,6 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
         emailTemplateElement.select();
         document.execCommand('copy');
         safeShowStatus('Email template copied to clipboard!', 'success');
+        
+        // Track this property as contacted
+        trackContactedProperty('copied');
       } catch (error) {
         console.error('Error copying to clipboard:', error);
         safeShowStatus('Error copying to clipboard. Please try again.', 'error');
@@ -233,6 +236,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.open(`mailto:${agentEmail}?subject=${encodeURIComponent(subject)}&body=${body}`);
                 safeShowStatus('Opening email client...', 'success');
               }
+              
+              // Track this property as contacted
+              trackContactedProperty('sent');
             } catch (error) {
               console.error('Error opening email client:', error);
               safeShowStatus('Error opening email client. Please try again.', 'error');
@@ -287,31 +293,18 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       chrome.storage.sync.get({
         // Default values
-        templates: [{
-          id: 'default',
-          name: 'Standard Inquiry',
-          isDefault: true,
-          content: `Dear {{agent_name}},
-
-I am interested in the property at {{property_address}} that I found on Zillow. I would like to schedule a viewing at your earliest convenience.
-
-Could you please provide me with more information about this property, including:
-- Current status (is it still available?)
-- Any recent price changes
-- Details about the neighborhood
-- Potential closing timeline
-
-I'm looking forward to hearing back from you soon.
-
-Thank you,
-{{your_name}}
-{{your_phone}}
-{{your_email}}`
-        }]
+        templates: []
       }, (items) => {
         try {
           // Store templates
           templates = items.templates || [];
+          
+          // If no templates found, this is probably a new install,
+          // so we'll wait for options page to set up the default template
+          if (templates.length === 0) {
+            safeShowStatus('No templates available. Please visit settings to set up templates.', 'error');
+            return;
+          }
           
           // Populate template selector
           populateTemplateSelector();
@@ -395,6 +388,49 @@ Thank you,
     } catch (error) {
       console.error('Error showing status message:', error);
       // At this point we can't do much more than log the error
+    }
+  }
+
+  // Function to track properties that have been contacted
+  function trackContactedProperty(action) {
+    try {
+      if (!propertyInfo || !propertyInfo.propertyAddress) {
+        console.warn('No property info available to track');
+        return;
+      }
+
+      // Create a unique identifier for the property
+      const propertyId = propertyInfo.propertyAddress.trim().toLowerCase();
+      
+      // Get current tab URL
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        const currentUrl = tabs[0].url;
+        
+        // Get current date
+        const contactDate = new Date().toISOString();
+        
+        // Load existing contacted properties
+        chrome.storage.local.get({ contactedProperties: {} }, (result) => {
+          const contactedProperties = result.contactedProperties || {};
+          
+          // Add or update the property in the list
+          contactedProperties[propertyId] = {
+            address: propertyInfo.propertyAddress,
+            url: currentUrl,
+            agent: propertyInfo.agentName || 'Unknown Agent',
+            lastContacted: contactDate,
+            contactType: action, // 'sent' or 'copied'
+            timesContacted: (contactedProperties[propertyId]?.timesContacted || 0) + 1
+          };
+          
+          // Save back to storage
+          chrome.storage.local.set({ contactedProperties }, () => {
+            console.log(`Property tracked as ${action}: ${propertyInfo.propertyAddress}`);
+          });
+        });
+      });
+    } catch (error) {
+      console.error('Error tracking contacted property:', error);
     }
   }
 }); 
