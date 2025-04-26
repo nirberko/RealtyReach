@@ -1,5 +1,5 @@
-// Default email template
-const DEFAULT_TEMPLATE = {
+// Default fallback template (used only if file loading fails)
+const FALLBACK_TEMPLATE = {
   id: 'default',
   name: 'Standard Inquiry',
   isDefault: true,
@@ -25,6 +25,7 @@ Thank you,
 const GITHUB_OWNER = 'nirberko'; // Replace with your GitHub username or organization
 const GITHUB_REPO = 'RealtyReach'; // Replace with your repository name
 const TEMPLATES_PATH = 'templates';
+const DEFAULT_TEMPLATE_FILE = 'default-standard-inquiry.json';
 
 // DOM elements
 const fullNameInput = document.getElementById('fullName');
@@ -45,14 +46,24 @@ const modalCloseButton = document.getElementById('modalClose');
 const marketplaceTemplatesContainer = document.getElementById('marketplaceTemplates');
 const refreshMarketplaceButton = document.getElementById('refreshMarketplaceButton');
 
+// Preview modal elements
+const previewModal = document.getElementById('previewModal');
+const previewTitle = document.getElementById('previewTitle');
+const previewContent = document.getElementById('previewContent');
+const previewClose = document.getElementById('previewClose');
+const previewCloseButton = document.getElementById('previewCloseButton');
+
 // Templates array
 let templates = [];
+let defaultTemplate = null;
 let currentEditingTemplateId = null;
 
 // Load saved settings when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-  loadSettings();
-  loadMarketplaceTemplates();
+  loadDefaultTemplate().then(() => {
+    loadSettings();
+    loadMarketplaceTemplates();
+  });
 });
 
 // Save settings when the save button is clicked
@@ -71,8 +82,48 @@ modalSaveButton.addEventListener('click', saveTemplate);
 modalCancelButton.addEventListener('click', closeTemplateModal);
 modalCloseButton.addEventListener('click', closeTemplateModal);
 
+// Preview modal close buttons
+previewClose.addEventListener('click', closePreviewModal);
+previewCloseButton.addEventListener('click', closePreviewModal);
+
 // Refresh marketplace button
 refreshMarketplaceButton.addEventListener('click', loadMarketplaceTemplates);
+
+// Function to load the default template from the templates folder
+async function loadDefaultTemplate() {
+  try {
+    // Fetch the default template from GitHub
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${TEMPLATES_PATH}/${DEFAULT_TEMPLATE_FILE}`);
+    
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+    
+    const fileInfo = await response.json();
+    const templateResponse = await fetch(fileInfo.download_url);
+    
+    if (!templateResponse.ok) {
+      throw new Error(`Error fetching template: ${templateResponse.status}`);
+    }
+    
+    const templateData = await templateResponse.json();
+    
+    // Create default template with a unique ID
+    defaultTemplate = {
+      id: 'default',
+      name: templateData.name,
+      content: templateData.content,
+      isDefault: true
+    };
+    
+    console.log('Default template loaded successfully');
+  } catch (error) {
+    console.error('Error loading default template:', error);
+    // Use fallback template if loading fails
+    defaultTemplate = FALLBACK_TEMPLATE;
+    showStatus('Using built-in default template as fallback.', 'error');
+  }
+}
 
 // Function to load saved settings from Chrome storage
 function loadSettings() {
@@ -81,7 +132,7 @@ function loadSettings() {
     fullName: '',
     phoneNumber: '',
     email: '',
-    templates: [DEFAULT_TEMPLATE]
+    templates: defaultTemplate ? [defaultTemplate] : [FALLBACK_TEMPLATE]
   }, (items) => {
     // Update input fields with saved values
     fullNameInput.value = items.fullName;
@@ -90,6 +141,15 @@ function loadSettings() {
     
     // Load templates
     templates = items.templates;
+    
+    // Make sure we have at least one default template
+    if (templates.length === 0) {
+      templates = [defaultTemplate || FALLBACK_TEMPLATE];
+    } else if (!templates.some(t => t.isDefault)) {
+      // If no default template is set, make the first one default
+      templates[0].isDefault = true;
+    }
+    
     renderTemplateList();
   });
 }
@@ -133,8 +193,8 @@ function openTemplateModal(templateId = null) {
     // Add new template
     currentEditingTemplateId = null;
     modalTitle.textContent = 'Add New Template';
-    // Set default template content
-    templateContentInput.value = DEFAULT_TEMPLATE.content;
+    // Set default template content based on the loaded default template
+    templateContentInput.value = (defaultTemplate || FALLBACK_TEMPLATE).content;
   }
   
   // Show modal
@@ -145,6 +205,44 @@ function openTemplateModal(templateId = null) {
 function closeTemplateModal() {
   templateModal.style.display = 'none';
   currentEditingTemplateId = null;
+}
+
+// Function to open preview modal
+function openPreviewModal(templateId) {
+  const template = templates.find(t => t.id === templateId);
+  
+  if (!template) {
+    return;
+  }
+  
+  // Get user info for placeholders
+  const fullName = fullNameInput.value.trim() || 'Your Name';
+  const phoneNumber = phoneNumberInput.value.trim() || 'Your Phone';
+  const email = emailInput.value.trim() || 'your.email@example.com';
+  
+  // Sample property data
+  const samplePropertyAddress = '123 Main Street, Anytown, CA 12345';
+  const sampleAgentName = 'Alex Johnson';
+  
+  // Replace placeholders in the template
+  let previewText = template.content
+    .replace(/{{your_name}}/g, fullName)
+    .replace(/{{your_phone}}/g, phoneNumber)
+    .replace(/{{your_email}}/g, email)
+    .replace(/{{property_address}}/g, samplePropertyAddress)
+    .replace(/{{agent_name}}/g, sampleAgentName);
+  
+  // Set the preview title and content
+  previewTitle.textContent = `Preview: ${template.name}`;
+  previewContent.textContent = previewText;
+  
+  // Show preview modal
+  previewModal.style.display = 'flex';
+}
+
+// Function to close preview modal
+function closePreviewModal() {
+  previewModal.style.display = 'none';
 }
 
 // Function to generate a unique ID
@@ -273,6 +371,13 @@ function renderTemplateList() {
     const templateControls = document.createElement('div');
     templateControls.className = 'template-item-controls';
     
+    // Preview button
+    const previewButton = document.createElement('button');
+    previewButton.className = 'btn-preview';
+    previewButton.textContent = 'Preview';
+    previewButton.addEventListener('click', () => openPreviewModal(template.id));
+    templateControls.appendChild(previewButton);
+    
     // Edit button
     const editButton = document.createElement('button');
     editButton.className = 'btn-edit';
@@ -334,8 +439,10 @@ function loadMarketplaceTemplates() {
       return response.json();
     })
     .then(files => {
-      // Filter for JSON files only
-      const jsonFiles = files.filter(file => file.name.endsWith('.json'));
+      // Filter for JSON files only, excluding the default template
+      const jsonFiles = files.filter(file => 
+        file.name.endsWith('.json') && file.name !== DEFAULT_TEMPLATE_FILE
+      );
       
       if (jsonFiles.length === 0) {
         marketplaceTemplatesContainer.innerHTML = '<p>No templates available in the marketplace yet.</p>';
@@ -382,6 +489,20 @@ function loadMarketplaceTemplates() {
         templateDescription.className = 'marketplace-template-description';
         templateDescription.textContent = template.description || 'No description provided.';
         
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '10px';
+        buttonContainer.style.justifyContent = 'flex-end';
+        
+        // Preview button for marketplace template
+        const previewButton = document.createElement('button');
+        previewButton.className = 'btn-preview';
+        previewButton.textContent = 'Preview';
+        previewButton.style.backgroundColor = '#f5f5f5';
+        previewButton.style.color = '#333';
+        previewButton.addEventListener('click', () => previewMarketplaceTemplate(template));
+        buttonContainer.appendChild(previewButton);
+        
         const addButton = document.createElement('button');
         addButton.className = 'marketplace-template-add';
         
@@ -396,10 +517,11 @@ function loadMarketplaceTemplates() {
           addButton.textContent = 'Add Template';
           addButton.addEventListener('click', () => addTemplateFromMarketplace(template));
         }
+        buttonContainer.appendChild(addButton);
         
         templateItem.appendChild(templateHeader);
         templateItem.appendChild(templateDescription);
-        templateItem.appendChild(addButton);
+        templateItem.appendChild(buttonContainer);
         
         marketplaceTemplatesContainer.appendChild(templateItem);
       });
@@ -413,6 +535,33 @@ function loadMarketplaceTemplates() {
         </div>
       `;
     });
+}
+
+// Function to preview marketplace template
+function previewMarketplaceTemplate(marketplaceTemplate) {
+  // Get user info for placeholders
+  const fullName = fullNameInput.value.trim() || 'Your Name';
+  const phoneNumber = phoneNumberInput.value.trim() || 'Your Phone';
+  const email = emailInput.value.trim() || 'your.email@example.com';
+  
+  // Sample property data
+  const samplePropertyAddress = '123 Main Street, Anytown, CA 12345';
+  const sampleAgentName = 'Alex Johnson';
+  
+  // Replace placeholders in the template
+  let previewText = marketplaceTemplate.content
+    .replace(/{{your_name}}/g, fullName)
+    .replace(/{{your_phone}}/g, phoneNumber)
+    .replace(/{{your_email}}/g, email)
+    .replace(/{{property_address}}/g, samplePropertyAddress)
+    .replace(/{{agent_name}}/g, sampleAgentName);
+  
+  // Set the preview title and content
+  previewTitle.textContent = `Preview: ${marketplaceTemplate.name}`;
+  previewContent.textContent = previewText;
+  
+  // Show preview modal
+  previewModal.style.display = 'flex';
 }
 
 // Function to add a template from the marketplace
@@ -450,7 +599,7 @@ function resetToDefault() {
     emailInput.value = '';
     
     // Reset templates to just the default
-    templates = [DEFAULT_TEMPLATE];
+    templates = [defaultTemplate || FALLBACK_TEMPLATE];
     
     // Re-render template list
     renderTemplateList();

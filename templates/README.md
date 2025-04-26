@@ -10,6 +10,10 @@ Templates in this directory can be imported directly from the extension's templa
 2. Click on the "Template Marketplace" button
 3. Browse available templates and click "Add" to import them to your extension
 
+## Default Template
+
+The file `default-standard-inquiry.json` is used as the default template when a user first installs the extension. This template is automatically loaded and set as the default template. If this file cannot be loaded for any reason, the extension will fall back to a built-in default template.
+
 ## How to Contribute a Template
 
 To contribute a template to the marketplace:
@@ -26,6 +30,14 @@ To contribute a template to the marketplace:
   "description": "A brief description of when and how to use this template",
   "author": "Your Name",
   "content": "Dear {{agent_name}},\n\nYour template content goes here...\n\nThank you,\n{{your_name}}\n{{your_phone}}\n{{your_email}}"
+}
+```
+
+For the default template, you can include an additional field:
+
+```json
+{
+  "isDefault": true
 }
 ```
 

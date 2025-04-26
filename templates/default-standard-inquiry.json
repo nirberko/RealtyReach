@@ -1,0 +1,7 @@
+{
+  "name": "Standard Inquiry",
+  "description": "A general purpose template for inquiring about a property listing",
+  "author": "RealtyReach Team",
+  "content": "Dear {{agent_name}},\n\nI am interested in the property at {{property_address}} that I found on Zillow. I would like to schedule a viewing at your earliest convenience.\n\nCould you please provide me with more information about this property, including:\n- Current status (is it still available?)\n- Any recent price changes\n- Details about the neighborhood\n- Potential closing timeline\n\nI'm looking forward to hearing back from you soon.\n\nThank you,\n{{your_name}}\n{{your_phone}}\n{{your_email}}",
+  "isDefault": true
+} 
