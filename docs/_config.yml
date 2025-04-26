@@ -1,5 +1,9 @@
-theme: jekyll-theme-cayman
-title: Zillow Chrome Extension
-description: Documentation for our Chrome Extension
+remote_theme: pages-themes/cayman@v0.2.0
+plugins:
+  - jekyll-remote-theme
+title: RealtyReach Chrome Extension
+description: A Chrome extension that helps you generate and send emails to property agents on real estate listing sites
 show_downloads: false
-baseurl: ""
+github:
+  is_project_page: true
+  repository_url: https://github.com/nirberko/RealtyReach
