@@ -1,3 +1,9 @@
+---
+layout: default
+title: Privacy Policy
+permalink: /privacy/
+---
+
 # Privacy Policy
 
 ## Introduction
@@ -63,4 +69,4 @@ We may update this privacy policy from time to time to reflect changes in our pr
 
 If you have questions or concerns about this privacy policy or our privacy practices, please contact us at nirberko@gmail.com.
 
-Last updated: 26 April 2025
+Last updated: 26 April 2025 

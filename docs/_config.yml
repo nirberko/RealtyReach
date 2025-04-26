@@ -1,4 +1,5 @@
 theme: jekyll-theme-cayman
-title: Privacy Policy
-description: Privacy Policy for Chrome Extension
+title: Zillow Chrome Extension
+description: Documentation for our Chrome Extension
 show_downloads: false
+baseurl: ""
