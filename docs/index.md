@@ -24,7 +24,7 @@ A Chrome extension that helps you generate and send emails to property agents on
 
 ### Developer Mode
 
-1. Clone or download the repository from [GitHub](https://github.com/your-username/zillow-chrome-extension)
+1. Clone or download the repository from [GitHub](https://github.com/nirberko/RealtyReach)
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable "Developer mode" by toggling the switch in the top-right corner
 4. Click "Load unpacked" and select the extension directory
@@ -53,11 +53,11 @@ This extension:
 - Does not store any browsing history
 - Works entirely locally in your browser
 
-For more details, please read our [Privacy Policy](/privacy/).
+For more details, please read our [Privacy Policy](https://nirberko.github.io/RealtyReach/privacy/).
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request on our [GitHub repository](https://github.com/your-username/zillow-chrome-extension).
+Contributions are welcome! Please feel free to submit a Pull Request on our [GitHub repository](https://github.com/nirberko/RealtyReach).
 
 ## License
 
