@@ -1,6 +1,0 @@
-{
-  "name": "Luxury Property Inquiry",
-  "description": "An elegant template for high-end property inquiries, emphasizing discretion and quality",
-  "author": "Zillow Agent Emailer Team",
-  "content": "Dear {{agent_name}},\n\nI hope this message finds you well. I'm reaching out regarding the luxury property at {{property_address}} that I discovered on Zillow.\n\nAs a discerning buyer in the luxury market, I'm particularly interested in properties that offer exceptional quality, privacy, and unique features. This listing appears to meet my criteria, and I would appreciate the opportunity to learn more about it.\n\nSpecifically, I'm interested in:\n\n1. The architectural history and any notable designers or builders involved\n2. Special amenities or custom features not fully detailed in the listing\n3. The surrounding neighborhood and proximity to cultural venues\n4. Security features and privacy considerations\n5. Any recent renovations or upgrades to the property\n\nI understand the unique nature of luxury real estate transactions and assure you of my serious interest and financial readiness. I would welcome a private showing at your earliest convenience.\n\nThank you for your attention to this inquiry. I look forward to your response.\n\nWarm regards,\n{{your_name}}\n{{your_phone}}\n{{your_email}}"
-} 

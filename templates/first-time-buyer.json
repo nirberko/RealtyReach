@@ -1,6 +1,0 @@
-{
-  "name": "First-Time Buyer Inquiry",
-  "description": "A friendly template for first-time home buyers asking key questions about the property",
-  "author": "RealtyReach Team",
-  "content": "Dear {{agent_name}},\n\nI'm excited to reach out about the property at {{property_address}} that I found on Zillow. As a first-time home buyer, I'm particularly interested in this listing and would appreciate some additional information.\n\nCould you please let me know:\n\n1. Is this property still available for viewing?\n2. Are there any known issues with the property that might not be visible in the listing?\n3. How long has the property been on the market?\n4. Would the seller be open to any contingencies for a first-time buyer?\n5. What are the neighbor demographics and nearby amenities?\n\nI'm currently pre-approved for financing and looking to make a decision in the next few weeks.\n\nThank you for your assistance, and I look forward to hearing from you soon.\n\nBest regards,\n{{your_name}}\n{{your_phone}}\n{{your_email}}"
-} 

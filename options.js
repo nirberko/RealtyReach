@@ -556,6 +556,7 @@ function loadMarketplaceTemplates() {
       
       // Apply any active filters
       filterMarketplaceTemplates();
+      addMarketplaceFooter();
     })
     .catch(error => {
       console.error('Error fetching marketplace templates:', error);
@@ -665,6 +666,33 @@ function renderMarketplaceTemplates(filteredTemplates) {
   });
 }
 
+// Helper to add the marketplace footer outside the grid
+function addMarketplaceFooter() {
+  // Remove any existing footer
+  const oldFooter = document.querySelector('.marketplace-footer');
+  if (oldFooter) oldFooter.remove();
+
+  // Add marketplace footer with GitHub link after the grid
+  const marketplaceFooter = document.createElement('div');
+  marketplaceFooter.className = 'marketplace-footer';
+  marketplaceFooter.style.marginTop = '24px';
+  marketplaceFooter.style.textAlign = 'center';
+  marketplaceFooter.style.fontSize = '13px';
+  marketplaceFooter.innerHTML = `
+    <hr style="margin: 16px 0;">
+    <span>
+      Want to create and publish your own template? Visit the
+      <a href="https://github.com/nirberko/RealtyReach/tree/main/templates" target="_blank" rel="noopener noreferrer">GitHub templates folder</a>.
+      <br>
+      This is the place to contribute new templates to the marketplace!
+    </span>
+  `;
+  // Insert after the marketplaceTemplatesContainer
+  if (marketplaceTemplatesContainer && marketplaceTemplatesContainer.parentNode) {
+    marketplaceTemplatesContainer.parentNode.insertBefore(marketplaceFooter, marketplaceTemplatesContainer.nextSibling);
+  }
+}
+
 // Function to preview marketplace template
 function previewMarketplaceTemplate(marketplaceTemplate) {
   // Get user info for placeholders
@@ -698,8 +726,7 @@ function addTemplateFromMarketplace(marketplaceTemplate) {
   const newTemplate = {
     id: generateUniqueId(),
     name: marketplaceTemplate.name,
-    content: marketplaceTemplate.content,
-    isDefault: false
+    content: marketplaceTemplate.content
   };
   
   // Add category if available

@@ -1,7 +1,0 @@
-{
-  "name": "Vacation Home Inquiry",
-  "description": "A specialized template for inquiring about vacation properties and second homes in resort or scenic areas",
-  "author": "RealtyReach Team",
-  "category": "Vacation Home",
-  "content": "Dear {{agent_name}},\n\nI'm writing to express my interest in the property at {{property_address}} that I found while browsing Zillow. I'm in the market for a vacation home and this property seems to fit my criteria.\n\nI would appreciate some additional information regarding:\n\n1. Seasonal considerations - How is the property during different seasons? Are there any weather-related concerns?\n2. Rental potential - What are the short-term rental regulations in this area? Is there a rental history for this property?\n3. Off-season maintenance - What arrangements are typically made for property care when not in residence?\n4. Local amenities - How far is it to nearby attractions, shopping, and dining options?\n5. Community details - Is this part of an association or community with shared amenities?\n6. Internet connectivity - Is high-speed internet available? This is important as I may need to work remotely.\n\nI'm planning to visit the area soon and would like to arrange a viewing if possible.\n\nThank you for your assistance,\n\n{{your_name}}\n{{your_phone}}\n{{your_email}}"
-} 
