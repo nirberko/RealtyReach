@@ -1,0 +1,6 @@
+{
+  "name": "Investment Property Inquiry",
+  "description": "A professional template for investors interested in rental or flip opportunities",
+  "author": "RealtyReach Team",
+  "content": "Dear {{agent_name}},\n\nI'm writing to inquire about the property at {{property_address}} listed on Zillow. I'm an experienced investor looking to expand my portfolio in this area.\n\nCould you provide me with the following information:\n\n1. Current rental income (if applicable) or potential rental value\n2. Any major repairs or renovations needed\n3. Property tax information and HOA fees (if applicable)\n4. Recent comparable sales in the neighborhood\n5. Seller's timeline and motivation for selling\n6. Possibility of a quick closing for a strong cash offer\n\nI've completed multiple investment property purchases in the past and can provide proof of funds if this property meets my criteria.\n\nThank you for your time. I look forward to your response.\n\nRegards,\n{{your_name}}\n{{your_phone}}\n{{your_email}}"
+} 

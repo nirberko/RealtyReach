@@ -275,7 +275,7 @@ function addExtensionIndicator() {
   indicator.style.fontSize = '14px';
   indicator.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
   indicator.style.cursor = 'pointer';
-  indicator.textContent = '📧 Zillow Agent Emailer Ready';
+  indicator.textContent = '📧 RealtyReach Ready';
   
   indicator.addEventListener('click', () => {
     chrome.runtime.sendMessage({ action: 'openPopup' });

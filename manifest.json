@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Zillow Agent Emailer",
+  "name": "RealtyReach",
   "version": "1.0",
   "description": "Generate emails to property agents on Zillow",
   "permissions": [
@@ -9,7 +9,8 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://*.zillow.com/*"
+    "https://*.zillow.com/*",
+    "https://api.github.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

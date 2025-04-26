@@ -21,6 +21,11 @@ Thank you,
 {{your_email}}`
 };
 
+// GitHub repository information
+const GITHUB_OWNER = 'nirberko'; // Replace with your GitHub username or organization
+const GITHUB_REPO = 'RealtyReach'; // Replace with your repository name
+const TEMPLATES_PATH = 'templates';
+
 // DOM elements
 const fullNameInput = document.getElementById('fullName');
 const phoneNumberInput = document.getElementById('phoneNumber');
@@ -37,13 +42,18 @@ const templateContentInput = document.getElementById('templateContent');
 const modalSaveButton = document.getElementById('modalSave');
 const modalCancelButton = document.getElementById('modalCancel');
 const modalCloseButton = document.getElementById('modalClose');
+const marketplaceTemplatesContainer = document.getElementById('marketplaceTemplates');
+const refreshMarketplaceButton = document.getElementById('refreshMarketplaceButton');
 
 // Templates array
 let templates = [];
 let currentEditingTemplateId = null;
 
 // Load saved settings when the page loads
-document.addEventListener('DOMContentLoaded', loadSettings);
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  loadMarketplaceTemplates();
+});
 
 // Save settings when the save button is clicked
 saveButton.addEventListener('click', saveSettings);
@@ -60,6 +70,9 @@ modalSaveButton.addEventListener('click', saveTemplate);
 // Modal cancel and close buttons
 modalCancelButton.addEventListener('click', closeTemplateModal);
 modalCloseButton.addEventListener('click', closeTemplateModal);
+
+// Refresh marketplace button
+refreshMarketplaceButton.addEventListener('click', loadMarketplaceTemplates);
 
 // Function to load saved settings from Chrome storage
 function loadSettings() {
@@ -198,104 +211,255 @@ function deleteTemplate(templateId) {
   }
   
   if (template.isDefault) {
-    showStatus('Cannot delete the default template', 'error');
+    showStatus('You cannot delete the default template.', 'error');
     return;
   }
   
-  if (confirm(`Are you sure you want to delete the template "${template.name}"?`)) {
-    templates = templates.filter(t => t.id !== templateId);
-    renderTemplateList();
-    saveSettings();
-  }
+  // Remove template from array
+  templates = templates.filter(t => t.id !== templateId);
+  
+  // Re-render template list
+  renderTemplateList();
+  
+  // Auto-save settings
+  saveSettings();
 }
 
 // Function to set template as default
 function setDefaultTemplate(templateId) {
-  templates.forEach(template => {
-    template.isDefault = template.id === templateId;
-  });
+  // Find template
+  const template = templates.find(t => t.id === templateId);
   
-  renderTemplateList();
-  saveSettings();
-}
-
-// Function to render template list
-function renderTemplateList() {
-  // Clear existing list
-  templateListContainer.innerHTML = '';
-  
-  // If no templates, show empty state
-  if (templates.length === 0) {
-    templateListContainer.innerHTML = `
-      <div class="template-item">
-        <p>No templates yet. Click "Add New Template" to create one.</p>
-      </div>
-    `;
+  if (!template) {
     return;
   }
   
-  // Sort templates (default first, then alphabetically)
-  const sortedTemplates = [...templates].sort((a, b) => {
-    if (a.isDefault) return -1;
-    if (b.isDefault) return 1;
-    return a.name.localeCompare(b.name);
+  // Update isDefault property for all templates
+  templates.forEach(t => {
+    t.isDefault = (t.id === templateId);
   });
   
-  // Create template items
-  sortedTemplates.forEach(template => {
+  // Re-render template list
+  renderTemplateList();
+  
+  // Auto-save settings
+  saveSettings();
+}
+
+// Function to render the template list
+function renderTemplateList() {
+  // Clear container
+  templateListContainer.innerHTML = '';
+  
+  // Render each template
+  templates.forEach(template => {
     const templateItem = document.createElement('div');
     templateItem.className = 'template-item';
     
-    templateItem.innerHTML = `
-      <div class="template-item-header">
-        <div class="template-item-title">
-          ${template.name}
-          ${template.isDefault ? '<span class="default-badge">Default</span>' : ''}
-        </div>
-        <div class="template-item-controls">
-          <button class="btn-edit" data-id="${template.id}">Edit</button>
-          ${!template.isDefault ? `<button class="btn-make-default" data-id="${template.id}">Make Default</button>` : ''}
-          ${!template.isDefault ? `<button class="btn-delete" data-id="${template.id}">Delete</button>` : ''}
-        </div>
-      </div>
-      <div class="template-preview">
-        ${template.content.substring(0, 100)}...
-      </div>
-    `;
+    const templateHeader = document.createElement('div');
+    templateHeader.className = 'template-item-header';
+    
+    const templateTitle = document.createElement('div');
+    templateTitle.className = 'template-item-title';
+    templateTitle.textContent = template.name;
+    
+    if (template.isDefault) {
+      const defaultBadge = document.createElement('span');
+      defaultBadge.className = 'default-badge';
+      defaultBadge.textContent = 'Default';
+      templateTitle.appendChild(defaultBadge);
+    }
+    
+    const templateControls = document.createElement('div');
+    templateControls.className = 'template-item-controls';
+    
+    // Edit button
+    const editButton = document.createElement('button');
+    editButton.className = 'btn-edit';
+    editButton.textContent = 'Edit';
+    editButton.addEventListener('click', () => openTemplateModal(template.id));
+    templateControls.appendChild(editButton);
+    
+    // Make Default button (only show if not already default)
+    if (!template.isDefault) {
+      const makeDefaultButton = document.createElement('button');
+      makeDefaultButton.className = 'btn-make-default';
+      makeDefaultButton.textContent = 'Make Default';
+      makeDefaultButton.addEventListener('click', () => setDefaultTemplate(template.id));
+      templateControls.appendChild(makeDefaultButton);
+      
+      // Delete button (only show if not default)
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'btn-delete';
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', () => {
+        if (confirm(`Are you sure you want to delete the "${template.name}" template?`)) {
+          deleteTemplate(template.id);
+        }
+      });
+      templateControls.appendChild(deleteButton);
+    }
+    
+    templateHeader.appendChild(templateTitle);
+    templateHeader.appendChild(templateControls);
+    
+    const templateContent = document.createElement('pre');
+    templateContent.style.whiteSpace = 'pre-wrap';
+    templateContent.style.fontSize = '12px';
+    templateContent.style.maxHeight = '100px';
+    templateContent.style.overflow = 'auto';
+    templateContent.style.backgroundColor = '#f0f0f0';
+    templateContent.style.padding = '8px';
+    templateContent.style.borderRadius = '4px';
+    templateContent.textContent = template.content;
+    
+    templateItem.appendChild(templateHeader);
+    templateItem.appendChild(templateContent);
     
     templateListContainer.appendChild(templateItem);
-    
-    // Add event listeners
-    const editButton = templateItem.querySelector('.btn-edit');
-    editButton.addEventListener('click', () => openTemplateModal(template.id));
-    
-    const makeDefaultButton = templateItem.querySelector('.btn-make-default');
-    if (makeDefaultButton) {
-      makeDefaultButton.addEventListener('click', () => setDefaultTemplate(template.id));
-    }
-    
-    const deleteButton = templateItem.querySelector('.btn-delete');
-    if (deleteButton) {
-      deleteButton.addEventListener('click', () => deleteTemplate(template.id));
-    }
   });
 }
 
-// Function to reset settings to default values
+// Function to load marketplace templates from GitHub
+function loadMarketplaceTemplates() {
+  // Show loading message
+  marketplaceTemplatesContainer.innerHTML = '<div class="marketplace-loading">Loading marketplace templates...</div>';
+  
+  // Fetch templates from GitHub API
+  fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${TEMPLATES_PATH}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(files => {
+      // Filter for JSON files only
+      const jsonFiles = files.filter(file => file.name.endsWith('.json'));
+      
+      if (jsonFiles.length === 0) {
+        marketplaceTemplatesContainer.innerHTML = '<p>No templates available in the marketplace yet.</p>';
+        return;
+      }
+      
+      // Create promises for fetching each template file
+      const templatePromises = jsonFiles.map(file => 
+        fetch(file.download_url)
+          .then(response => response.json())
+          .then(templateData => ({ ...templateData, filename: file.name }))
+      );
+      
+      // Wait for all template fetches to complete
+      return Promise.all(templatePromises);
+    })
+    .then(marketplaceTemplates => {
+      // Clear container
+      marketplaceTemplatesContainer.innerHTML = '';
+      
+      // Get existing template names for comparison
+      const existingTemplateNames = templates.map(t => t.name.toLowerCase());
+      
+      // Render each marketplace template
+      marketplaceTemplates.forEach(template => {
+        const templateItem = document.createElement('div');
+        templateItem.className = 'marketplace-template';
+        
+        const templateHeader = document.createElement('div');
+        templateHeader.className = 'marketplace-template-header';
+        
+        const templateTitle = document.createElement('div');
+        templateTitle.className = 'marketplace-template-title';
+        templateTitle.textContent = template.name;
+        
+        const templateAuthor = document.createElement('div');
+        templateAuthor.className = 'marketplace-template-author';
+        templateAuthor.textContent = `By: ${template.author || 'Unknown'}`;
+        
+        templateHeader.appendChild(templateTitle);
+        templateHeader.appendChild(templateAuthor);
+        
+        const templateDescription = document.createElement('div');
+        templateDescription.className = 'marketplace-template-description';
+        templateDescription.textContent = template.description || 'No description provided.';
+        
+        const addButton = document.createElement('button');
+        addButton.className = 'marketplace-template-add';
+        
+        // Check if this template already exists in user's templates
+        const templateExists = existingTemplateNames.includes(template.name.toLowerCase());
+        if (templateExists) {
+          addButton.textContent = 'Already Added';
+          addButton.disabled = true;
+          addButton.style.backgroundColor = '#f5f5f5';
+          addButton.style.color = '#999';
+        } else {
+          addButton.textContent = 'Add Template';
+          addButton.addEventListener('click', () => addTemplateFromMarketplace(template));
+        }
+        
+        templateItem.appendChild(templateHeader);
+        templateItem.appendChild(templateDescription);
+        templateItem.appendChild(addButton);
+        
+        marketplaceTemplatesContainer.appendChild(templateItem);
+      });
+    })
+    .catch(error => {
+      console.error('Error fetching marketplace templates:', error);
+      marketplaceTemplatesContainer.innerHTML = `
+        <div class="marketplace-error">
+          Error loading templates from marketplace: ${error.message}.
+          <p>Please try again later or check the repository configuration.</p>
+        </div>
+      `;
+    });
+}
+
+// Function to add a template from the marketplace
+function addTemplateFromMarketplace(marketplaceTemplate) {
+  // Create a new template object
+  const newTemplate = {
+    id: generateUniqueId(),
+    name: marketplaceTemplate.name,
+    content: marketplaceTemplate.content,
+    isDefault: false
+  };
+  
+  // Add to templates array
+  templates.push(newTemplate);
+  
+  // Re-render template list
+  renderTemplateList();
+  
+  // Re-render marketplace (to update the "Already Added" status)
+  loadMarketplaceTemplates();
+  
+  // Auto-save settings
+  saveSettings();
+  
+  // Show success message
+  showStatus(`Template "${marketplaceTemplate.name}" added successfully!`, 'success');
+}
+
+// Function to reset to default
 function resetToDefault() {
-  if (confirm('Are you sure you want to reset all settings to default values? This will delete all your custom templates.')) {
+  if (confirm('Are you sure you want to reset all settings? This will delete all your templates except the default one.')) {
+    // Reset contact info
     fullNameInput.value = '';
     phoneNumberInput.value = '';
     emailInput.value = '';
+    
+    // Reset templates to just the default
     templates = [DEFAULT_TEMPLATE];
     
-    // Save the default values
-    saveSettings();
-    
-    // Update UI
+    // Re-render template list
     renderTemplateList();
     
-    showStatus('Settings reset to default values.', 'success');
+    // Save settings
+    saveSettings();
+    
+    // Show success message
+    showStatus('Settings reset to default.', 'success');
   }
 }
 
@@ -305,7 +469,7 @@ function showStatus(message, type = 'success') {
   statusMessage.className = `status ${type}`;
   statusMessage.style.display = 'block';
   
-  // Hide message after 3 seconds
+  // Hide after 3 seconds
   setTimeout(() => {
     statusMessage.style.display = 'none';
   }, 3000);
