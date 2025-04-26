@@ -1,0 +1,7 @@
+{
+  "name": "High-End Condo Inquiry",
+  "description": "A specialized template for inquiring about luxury condominiums and penthouse properties in urban settings",
+  "author": "RealtyReach Team",
+  "category": "Luxury",
+  "content": "Dear {{agent_name}},\n\nI'm reaching out regarding the condominium at {{property_address}} that I discovered on Zillow. As a discerning buyer interested in premium urban living spaces, this property caught my attention.\n\nI'd like to inquire about several specific aspects of this condominium:\n\n1. Building amenities - What luxury services are provided? (concierge, valet parking, security features)\n2. HOA details - What are the monthly fees and what do they cover specifically?\n3. Recent renovations - Has the unit been updated or remodeled recently?\n4. Views and exposure - Does the unit have protected views or premium exposures?\n5. Building restrictions - Are there any limitations on rental options or renovation possibilities?\n6. Sound isolation - How is the sound insulation between units?\n\nI'm interested in arranging a private viewing of the property at your earliest convenience.\n\nThank you for your assistance,\n\n{{your_name}}\n{{your_phone}}\n{{your_email}}"
+} 

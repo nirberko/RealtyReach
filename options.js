@@ -45,6 +45,8 @@ const modalCancelButton = document.getElementById('modalCancel');
 const modalCloseButton = document.getElementById('modalClose');
 const marketplaceTemplatesContainer = document.getElementById('marketplaceTemplates');
 const refreshMarketplaceButton = document.getElementById('refreshMarketplaceButton');
+const templateSearchInput = document.getElementById('templateSearch');
+const marketplaceFilters = document.querySelectorAll('.marketplace-filter');
 
 // Preview modal elements
 const previewModal = document.getElementById('previewModal');
@@ -55,8 +57,11 @@ const previewCloseButton = document.getElementById('previewCloseButton');
 
 // Templates array
 let templates = [];
+let marketplaceTemplatesData = [];
 let defaultTemplate = null;
 let currentEditingTemplateId = null;
+let currentFilter = 'all';
+let searchQuery = '';
 
 // Load saved settings when the page loads
 document.addEventListener('DOMContentLoaded', () => {
@@ -64,7 +69,81 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     loadMarketplaceTemplates();
   });
+  
+  // Initialize marketplace search and filters
+  setupMarketplaceSearch();
+  setupMarketplaceFilters();
 });
+
+// Set up marketplace search
+function setupMarketplaceSearch() {
+  templateSearchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    filterMarketplaceTemplates();
+  });
+}
+
+// Set up marketplace filters
+function setupMarketplaceFilters() {
+  marketplaceFilters.forEach(filter => {
+    filter.addEventListener('click', () => {
+      // Remove active class from all filters
+      marketplaceFilters.forEach(f => f.classList.remove('active'));
+      
+      // Add active class to clicked filter
+      filter.classList.add('active');
+      
+      // Update current filter
+      currentFilter = filter.getAttribute('data-filter');
+      
+      // Filter templates
+      filterMarketplaceTemplates();
+    });
+  });
+}
+
+// Filter marketplace templates based on search query and selected filter
+function filterMarketplaceTemplates() {
+  if (!marketplaceTemplatesData.length) return;
+  
+  renderMarketplaceTemplates(
+    marketplaceTemplatesData.filter(template => {
+      // Apply search filter if search query exists
+      const matchesSearch = searchQuery === '' || 
+        template.name.toLowerCase().includes(searchQuery) || 
+        template.description.toLowerCase().includes(searchQuery) ||
+        template.author.toLowerCase().includes(searchQuery) ||
+        (template.category && template.category.toLowerCase().includes(searchQuery));
+      
+      // Apply category filter if not "all"
+      let matchesCategory = true;
+      if (currentFilter !== 'all') {
+        // Use the category field if available, otherwise fallback to inference
+        const category = template.category?.toLowerCase() || '';
+        
+        switch(currentFilter) {
+          case 'first-time':
+            matchesCategory = category === 'first-time buyer' || 
+              (category === '' && (template.filename?.includes('first-time') || 
+                template.description?.toLowerCase().includes('first-time')));
+            break;
+          case 'investment':
+            matchesCategory = category === 'investment' || 
+              (category === '' && (template.filename?.includes('investment') || 
+                template.description?.toLowerCase().includes('investment')));
+            break;
+          case 'luxury':
+            matchesCategory = category === 'luxury' || 
+              (category === '' && (template.filename?.includes('luxury') || 
+                template.description?.toLowerCase().includes('luxury')));
+            break;
+        }
+      }
+      
+      return matchesSearch && matchesCategory;
+    })
+  );
+}
 
 // Save settings when the save button is clicked
 saveButton.addEventListener('click', saveSettings);
@@ -428,7 +507,12 @@ function renderTemplateList() {
 // Function to load marketplace templates from GitHub
 function loadMarketplaceTemplates() {
   // Show loading message
-  marketplaceTemplatesContainer.innerHTML = '<div class="marketplace-loading">Loading marketplace templates...</div>';
+  marketplaceTemplatesContainer.innerHTML = `
+    <div class="marketplace-loading">
+      <div class="marketplace-loading-spinner"></div>
+      <div>Loading marketplace templates...</div>
+    </div>
+  `;
   
   // Fetch templates from GitHub API
   fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${TEMPLATES_PATH}`)
@@ -445,7 +529,12 @@ function loadMarketplaceTemplates() {
       );
       
       if (jsonFiles.length === 0) {
-        marketplaceTemplatesContainer.innerHTML = '<p>No templates available in the marketplace yet.</p>';
+        marketplaceTemplatesContainer.innerHTML = `
+          <div class="marketplace-empty">
+            <p>No templates available in the marketplace yet.</p>
+            <p>Be the first to contribute a template!</p>
+          </div>
+        `;
         return;
       }
       
@@ -460,81 +549,120 @@ function loadMarketplaceTemplates() {
       return Promise.all(templatePromises);
     })
     .then(marketplaceTemplates => {
-      // Clear container
-      marketplaceTemplatesContainer.innerHTML = '';
+      if (!marketplaceTemplates) return;
       
-      // Get existing template names for comparison
-      const existingTemplateNames = templates.map(t => t.name.toLowerCase());
+      // Store templates data
+      marketplaceTemplatesData = marketplaceTemplates;
       
-      // Render each marketplace template
-      marketplaceTemplates.forEach(template => {
-        const templateItem = document.createElement('div');
-        templateItem.className = 'marketplace-template';
-        
-        const templateHeader = document.createElement('div');
-        templateHeader.className = 'marketplace-template-header';
-        
-        const templateTitle = document.createElement('div');
-        templateTitle.className = 'marketplace-template-title';
-        templateTitle.textContent = template.name;
-        
-        const templateAuthor = document.createElement('div');
-        templateAuthor.className = 'marketplace-template-author';
-        templateAuthor.textContent = `By: ${template.author || 'Unknown'}`;
-        
-        templateHeader.appendChild(templateTitle);
-        templateHeader.appendChild(templateAuthor);
-        
-        const templateDescription = document.createElement('div');
-        templateDescription.className = 'marketplace-template-description';
-        templateDescription.textContent = template.description || 'No description provided.';
-        
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.justifyContent = 'flex-end';
-        
-        // Preview button for marketplace template
-        const previewButton = document.createElement('button');
-        previewButton.className = 'btn-preview';
-        previewButton.textContent = 'Preview';
-        previewButton.style.backgroundColor = '#f5f5f5';
-        previewButton.style.color = '#333';
-        previewButton.addEventListener('click', () => previewMarketplaceTemplate(template));
-        buttonContainer.appendChild(previewButton);
-        
-        const addButton = document.createElement('button');
-        addButton.className = 'marketplace-template-add';
-        
-        // Check if this template already exists in user's templates
-        const templateExists = existingTemplateNames.includes(template.name.toLowerCase());
-        if (templateExists) {
-          addButton.textContent = 'Already Added';
-          addButton.disabled = true;
-          addButton.style.backgroundColor = '#f5f5f5';
-          addButton.style.color = '#999';
-        } else {
-          addButton.textContent = 'Add Template';
-          addButton.addEventListener('click', () => addTemplateFromMarketplace(template));
-        }
-        buttonContainer.appendChild(addButton);
-        
-        templateItem.appendChild(templateHeader);
-        templateItem.appendChild(templateDescription);
-        templateItem.appendChild(buttonContainer);
-        
-        marketplaceTemplatesContainer.appendChild(templateItem);
-      });
+      // Apply any active filters
+      filterMarketplaceTemplates();
     })
     .catch(error => {
       console.error('Error fetching marketplace templates:', error);
       marketplaceTemplatesContainer.innerHTML = `
         <div class="marketplace-error">
-          Error loading templates from marketplace: ${error.message}.
+          <h3>Error loading templates</h3>
+          <p>${error.message}</p>
           <p>Please try again later or check the repository configuration.</p>
         </div>
       `;
     });
+}
+
+// Function to render marketplace templates
+function renderMarketplaceTemplates(filteredTemplates) {
+  // Clear container
+  marketplaceTemplatesContainer.innerHTML = '';
+  
+  // Get existing template names for comparison
+  const existingTemplateNames = templates.map(t => t.name.toLowerCase());
+  
+  if (filteredTemplates.length === 0) {
+    marketplaceTemplatesContainer.innerHTML = `
+      <div class="marketplace-empty">
+        <p>No templates match your search criteria.</p>
+        <p>Try adjusting your search or filters.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Render each marketplace template
+  filteredTemplates.forEach(template => {
+    const templateItem = document.createElement('div');
+    templateItem.className = 'marketplace-template';
+    
+    // Add category tag based on category field or fallback to inference
+    let categoryText = '';
+    if (template.category) {
+      // Use the category field if available
+      categoryText = template.category;
+    } else {
+      // Fallback to inference for backward compatibility
+      if (template.filename?.includes('first-time') || template.description?.toLowerCase().includes('first-time')) {
+        categoryText = 'First Time Buyer';
+      } else if (template.filename?.includes('investment') || template.description?.toLowerCase().includes('investment')) {
+        categoryText = 'Investment';
+      } else if (template.filename?.includes('luxury') || template.description?.toLowerCase().includes('luxury')) {
+        categoryText = 'Luxury';
+      }
+    }
+    
+    if (categoryText) {
+      const categoryTag = document.createElement('div');
+      categoryTag.className = 'marketplace-category';
+      categoryTag.textContent = categoryText;
+      templateItem.appendChild(categoryTag);
+    }
+    
+    const templateHeader = document.createElement('div');
+    templateHeader.className = 'marketplace-template-header';
+    
+    const templateTitle = document.createElement('div');
+    templateTitle.className = 'marketplace-template-title';
+    templateTitle.textContent = template.name;
+    
+    const templateAuthor = document.createElement('div');
+    templateAuthor.className = 'marketplace-template-author';
+    templateAuthor.textContent = `By: ${template.author || 'Unknown'}`;
+    
+    templateHeader.appendChild(templateTitle);
+    templateHeader.appendChild(templateAuthor);
+    
+    const templateDescription = document.createElement('div');
+    templateDescription.className = 'marketplace-template-description';
+    templateDescription.textContent = template.description || 'No description provided.';
+    
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'marketplace-template-actions';
+    
+    // Preview button for marketplace template
+    const previewButton = document.createElement('button');
+    previewButton.className = 'marketplace-template-preview';
+    previewButton.textContent = 'Preview';
+    previewButton.addEventListener('click', () => previewMarketplaceTemplate(template));
+    actionsContainer.appendChild(previewButton);
+    
+    const addButton = document.createElement('button');
+    addButton.className = 'marketplace-template-add';
+    
+    // Check if this template already exists in user's templates
+    const templateExists = existingTemplateNames.includes(template.name.toLowerCase());
+    if (templateExists) {
+      addButton.textContent = 'Already Added';
+      addButton.disabled = true;
+    } else {
+      addButton.textContent = 'Add Template';
+      addButton.addEventListener('click', () => addTemplateFromMarketplace(template));
+    }
+    actionsContainer.appendChild(addButton);
+    
+    templateItem.appendChild(templateHeader);
+    templateItem.appendChild(templateDescription);
+    templateItem.appendChild(actionsContainer);
+    
+    marketplaceTemplatesContainer.appendChild(templateItem);
+  });
 }
 
 // Function to preview marketplace template
@@ -574,6 +702,11 @@ function addTemplateFromMarketplace(marketplaceTemplate) {
     isDefault: false
   };
   
+  // Add category if available
+  if (marketplaceTemplate.category) {
+    newTemplate.category = marketplaceTemplate.category;
+  }
+  
   // Add to templates array
   templates.push(newTemplate);
   
@@ -581,7 +714,7 @@ function addTemplateFromMarketplace(marketplaceTemplate) {
   renderTemplateList();
   
   // Re-render marketplace (to update the "Already Added" status)
-  loadMarketplaceTemplates();
+  filterMarketplaceTemplates();
   
   // Auto-save settings
   saveSettings();
