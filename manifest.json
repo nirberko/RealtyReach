@@ -24,7 +24,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.zillow.com/*"],
-      "js": ["content.js"]
+      "js": ["sites/zillow.js", "sites/index.js", "content.js"]
     }
   ],
   "icons": {
