@@ -5,8 +5,7 @@
   "description": "Generate emails to property agents on Zillow",
   "permissions": [
     "activeTab",
-    "storage",
-    "scripting"
+    "storage"
   ],
   "host_permissions": [
     "https://*.zillow.com/*",
