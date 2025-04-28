@@ -1,5 +1,9 @@
 # RealtyReach Chrome Extension
 
+<p align="center">
+  <img src="images/icon.png" alt="RealtyReach Logo" width="200"/>
+</p>
+
 A Chrome extension that helps you generate and send emails to property agents on real estate listing sites.
 
 ## Features
